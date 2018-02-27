@@ -1,9 +1,8 @@
-//#include "Options.cpp"
-#include "huffman.h"
+#include "Options.cpp"
 #include <vector>
 #include <string>
 #include <iostream>
-/*
+
 int main(int argc, const char* argv[])
 {
   std::string first_arge;
@@ -25,24 +24,10 @@ int main(int argc, const char* argv[])
                                 "Add a file into archive",
                                 "Delete a file from archive"};
 
-  //Options Option(std::string(argv[0]), opts, decs, exts);
-    huffman::encode("test.sfa", "test.jpg");
-    huffman::decode("test1.jpg","test.sfa");
-  //Parse parser(Option);
-  //parser.parse(all_args, argc);
+  Options Option(std::string(argv[0]), opts, decs, exts);
+
+  Parse parser(Option);
+  parser.parse(all_args, argc);
 
   return 0;
   }
-*/
-
-
-int main(int argc, const char* argv[])
-{
-
-    std::vector<int> hello;
-
-
-    huffman::encode("test.sfa", "test.jpg");
-    huffman::decode("test1.jpg","test.sfa");
-    return 0;
-}
