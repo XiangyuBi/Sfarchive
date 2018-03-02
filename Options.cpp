@@ -89,7 +89,7 @@ std::string Options::str(size_t indent) const
             }
             //  DELETE CLASS HERE
             std::vector<std::string> files(inArgv.begin() + i + 1, inArgv.end());
-            for(auto & x : files) std::cout << x <<std::endl;
+            //for(auto & x : files) std::cout << x <<std::endl;
             break;
         }
 
@@ -108,8 +108,8 @@ std::string Options::str(size_t indent) const
       }
       else
       {
-        std::cout << "[Error]    Unrecognized option: " << inArgv[i] << std::endl;
-        std::cout << "           Try -h to get help of usage" << std::endl;
+        std::cerr << "[Error]    Unrecognized option: " << inArgv[i] << std::endl;
+        std::cerr << "           Try -h to get help of usage" << std::endl;
         break;
       }
       
