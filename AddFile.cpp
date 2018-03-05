@@ -30,7 +30,10 @@ void AddFile::add(std::string& filein) {
     }
 
     else
-        throw(errno);
+    {
+        std::cerr << "No file to read" << std::endl;
+        return;
+    }
 
 
     if (exists_test(filename))
@@ -66,8 +69,9 @@ std::string AddFile::generateLog(const std::string &filename, long &size, const 
     log += generateHelper(filename);
     log += generateHelper(std::to_string(size) + " " + block);
     log += generateHelper(time);
+    log += generateHelper("$Tag$:1");
 
-    return log;
+    return generateHelper(log);
 
 }
 
@@ -94,7 +98,7 @@ void AddFile::generateNewArchive(std::string &filein, std::string& content,  lon
 
     // generate initial header for the file
     std::string header = generateLog(filename, length, blockHeader);
-    header = "{ -1 }" + header;
+    header = "{-1}" + header + "{" + std::to_string(block) + "}";
     outfile.seekp(headerStart + pointerSize - 1);
 
     outfile.write(header.c_str(), header.size());
@@ -115,8 +119,225 @@ void AddFile::generateNewArchive(std::string &filein, std::string& content,  lon
  *  2. { { filename } {size , <blocks>} { time } }
  * */
 
-std::vector<int> AddFile::getBlockForFile(std::string &filename, std::string &header)
+
+
+
+
+void AddFile::addFileToArchive(std::string &filein, std::string &content, long &length, std::string &filename) {
+
+
+
+
+    std::cout << "    ...Existed archive: [ " << archive << " ]" <<  std::endl;
+    std::cout << "    ...Add file " << filename << std::endl;
+    std::fstream arcFile;
+    arcFile.open(filein, std::ios::in | std::ios::out | std::ios::binary);
+
+    if(arcFile) std::cout << "Archive name:" << filein << std::endl;
+    // Get the pointer
+
+    std::string pointer;
+    pointer.resize(pointerSize);
+    arcFile.read(&pointer[0], pointerSize);
+
+    std::string::size_type sz;
+    long headerLength = std::stol(pointer, &sz);
+
+    arcFile.seekg(0, std::ios::end);
+    long oldEnd = arcFile.tellg();
+    long position = oldEnd - headerLength;
+
+    // This position is important
+
+    arcFile.seekg(position);
+
+    std::string header;
+    header.resize(headerLength);
+    arcFile.read(&header[0], headerLength);
+   // std::cout << header << std::endl;
+
+    //std::cout << header.find_last_of(filename) << std::endl ;
+    //std::cout << header.find_last_of('}') << std::endl;
+    //std::cout << header.find(filename) << std::endl;
+
+    //std::cout << header.substr(0, header.rfind(filename)) << std::endl;
+
+    auto f = header.rfind(filename);
+
+
+    if(f != std::string::npos && header[f-1] == '{' && header[f+filename.size()] == '}')
+    {
+        if( header[header.find("$Tag$", f+1) + 6] != '0' ) {
+            std::cerr << "Tag: " <<  header[header.find("$Tag$", f+1) + 6] << std::endl;
+            std::cerr << "File " << filename << " " << "existed!" << std::endl;
+            return;
+        }
+    }
+
+    Header header1(header);
+    std::vector<int> avalBlock = header1.getAvailableBlock();
+
+    //std::vector<int> FileBlock = getBlockForFile(filename, header);
+   // std::cout << avalBlock[0] << std::endl;
+
+    int currentBlockNum;
+    auto s = header.rfind('{');
+    currentBlockNum = std::stoi(header.substr(s+1, header.size() - 1));
+    header.erase(s, header.size()-s);
+
+    if (avalBlock[0] == -1)
+    {
+
+        arcFile.seekp(position);
+        arcFile.write(content.c_str(), length);
+        //int currentBlockNum = (position - pointerSize) / blockSize;
+        int newBlockNum = ceil(double(length) / blockSize);
+        long newPosition = (currentBlockNum + newBlockNum ) * blockSize + pointerSize;
+
+        std::string newBlock;
+
+        for(auto i = currentBlockNum; i < currentBlockNum+newBlockNum; i++)
+        {
+            newBlock += std::to_string(i);
+            newBlock += " ";
+        }
+        std::string newHeader = generateLog(filename, length, newBlock);
+        header += newHeader;
+        header += generateHelper(std::to_string(newBlockNum+currentBlockNum));
+        arcFile.seekp(newPosition);
+        arcFile.write(header.c_str(), header.size());
+
+        std::string newPointerLength = std::to_string(header.size());
+        std::string comp(pointerSize-newPointerLength.size(), '0');
+        newPointerLength = comp + newPointerLength;
+
+        arcFile.seekp(std::ios::beg);
+        arcFile.write(newPointerLength.c_str(), pointerSize);
+        arcFile.close();
+      return;
+    }
+    else {
+
+        // fill the empty
+        size_t blocksUsed = 0;
+        std::string writeBuffer;
+        size_t currentWrite = 0;
+        while(currentWrite < content.size() && blocksUsed < avalBlock.size())
+        {
+            if(currentWrite + blockSize <= content.size()) {
+
+                writeBuffer = content.substr(currentWrite, blockSize);
+                arcFile.seekp(avalBlock[blocksUsed] * blockSize + pointerSize);
+                arcFile.write(writeBuffer.c_str(), blockSize);
+
+            }
+            else
+            {
+                writeBuffer = content.substr(content.size() - currentWrite);
+                arcFile.seekp(avalBlock[blocksUsed] * blockSize + pointerSize);
+                arcFile.write(writeBuffer.c_str(), writeBuffer.size());
+            }
+          currentWrite += blockSize;
+          blocksUsed++;
+        }
+
+        auto emptyBlockEnd = header.find('}', 0);
+
+        if(currentWrite < content.size() )
+        {
+            //Append the left data
+            std::cout << "Use up all empty " << std::endl;
+            writeBuffer = content.substr(currentWrite);
+            arcFile.seekp(position);
+            arcFile.write(writeBuffer.c_str(), writeBuffer.size());
+            //int currentBlockNum = (position - pointerSize) / blockSize;
+            int newBlockNum = ceil(double(length) / blockSize);
+            //auto newPosition = (currentBlockNum + newBlockNum) * blockSize + pointerSize;
+
+            std::string newBlock= header.substr(1, emptyBlockEnd - 1);
+
+            header.erase(0, newBlock.size()+1);
+
+            for(int i = currentBlockNum; i < currentBlockNum+newBlockNum-1; i++)
+            {
+                newBlock += " ";
+                newBlock += std::to_string(i);
+            }
+
+            header = "{-1" + header;
+            std::string newHeader = generateLog(filename, length, newBlock);
+            header+= newHeader;
+            header += generateHelper(std::to_string(newBlockNum+currentBlockNum));
+            arcFile.seekp(0,std::ios::end);
+            arcFile.write(header.c_str(), header.size());
+
+            std::string newPointerLength = std::to_string(header.size());
+            std::string comp(pointerSize-newPointerLength.size(), '0');
+
+            arcFile.seekp(std::ios::beg);
+            arcFile.write((comp + newPointerLength).c_str(), pointerSize);
+            arcFile.close();
+            return;
+
+        }
+        else
+        {
+            std::cout << "Still empty left" << std::endl;
+
+            std::string newBlock= header.substr(1, emptyBlockEnd - 1);
+            header.erase(0, newBlock.size()+1);
+            std::string emptyBlocks;
+            std::string usedBlocks;
+
+            if(blocksUsed == avalBlock.size())
+            {
+                emptyBlocks = "-1";
+                usedBlocks = newBlock;
+            }
+            else {
+                for (size_t i = 0; i < avalBlock.size(); i++) {
+
+                    if (i >= blocksUsed) {
+                        emptyBlocks += std::to_string(avalBlock[i]);
+                        emptyBlocks += " ";
+                    } else {
+                        usedBlocks += std::to_string(avalBlock[i]);
+                        usedBlocks += " ";
+                    }
+                }
+            }
+
+
+
+            header = "{" + emptyBlocks +  header;
+            std::string newHeader = generateLog(filename, length, usedBlocks);
+            header+= newHeader;
+            header += generateHelper(std::to_string(currentBlockNum));
+            arcFile.seekp(0,std::ios::end);
+            arcFile.write(header.c_str(), header.size());
+            arcFile.seekp(std::ios::beg);
+            std::string newPointer = std::to_string(header.size());
+            std::string comp(pointerSize-newPointer.size(), '0');
+            arcFile.write((comp + newPointer).c_str(), pointerSize);
+            arcFile.close();
+            return;
+
+
+        }
+
+
+    }
+
+}
+
+
+Header::Header(std::string &header)
+    : header(header)
 {
+
+}
+
+std::vector<int> Header::getBlockForFile(std::string &filename) {
     std::size_t found = 0;
     found = header.find(filename, found);
     std::vector<int> blocks;
@@ -135,11 +356,10 @@ std::vector<int> AddFile::getBlockForFile(std::string &filename, std::string &he
 
     else
         throw std::invalid_argument( "Cannot find such file" );
+
 }
 
-
-std::vector<int> AddFile::getAvailableBlock(std::string &header)
-{
+std::vector<int> Header::getAvailableBlock() {
 
     std::size_t found = header.find('}');
     std::string info = header.substr(1, found-1);
@@ -149,12 +369,10 @@ std::vector<int> AddFile::getAvailableBlock(std::string &header)
     for(int i = 0; ss >> i; )
         blocks.push_back(i);
     return blocks;
-
-
 }
 
-std::string AddFile::getInformationForFile(std::string &filename, std::string &header) {
 
+std::string Header::getInformationForFile(std::string &filename) {
     std::size_t curPos;
     std::size_t endPos;
     curPos = header.find(filename);
@@ -178,91 +396,3 @@ std::string AddFile::getInformationForFile(std::string &filename, std::string &h
     else
         throw std::invalid_argument( "Cannot find such file" );
 }
-
-
-
-
-void AddFile::addFileToArchive(std::string &filein, std::string &content, long &length, std::string &filename) {
-    std::cout << "    ...Existed archive: [ " << archive << " ]" <<  std::endl;
-    std::fstream arcFile;
-    arcFile.open(filein, std::ios::in | std::ios::out | std::ios::binary);
-
-    // Get the pointer
-
-    std::string pointer;
-    pointer.resize(pointerSize);
-    arcFile.read(&pointer[0], pointerSize);
-
-    std::string::size_type sz;
-    long headerLength = std::stol(pointer, &sz);
-
-    arcFile.seekg(0, std::ios::end);
-    long position = arcFile.tellg() - headerLength;
-
-    // This position is important
-    arcFile.seekg(position);
-
-    std::string header;
-    header.resize(headerLength);
-    arcFile.read(&header[0], headerLength);
-
-
-    auto f = header.find(filename);
-
-    if(f != std::string::npos && header[f-1] == '{' && header[f+filename.size()] == '}')
-    {
-        std::cerr<< "File " << filename << " " << "existed!" << std::endl;
-        return;
-    }
-
-    std::vector<int> avalBlock = getAvailableBlock(header);
-    //std::vector<int> FileBlock = getBlockForFile(filename, header);
-
-
-    if (avalBlock[0] == -1)
-    {
-        // append new
-        //std::cout << "Äppend New";
-        arcFile.seekp(position);
-        arcFile.write(content.c_str(), length);
-        int currentBlockNum = (position - pointerSize) / blockSize;
-        int newBlockNum = ceil(double(length) / blockSize);
-        long newPosition = (currentBlockNum + newBlockNum ) * blockSize + 1;
-
-        std::string newBlock;
-
-        for(auto i = currentBlockNum; i < currentBlockNum+newBlockNum; i++)
-        {
-            newBlock += std::to_string(i);
-            newBlock += " ";
-        }
-        std::string newHeader = generateLog(filename, length, newBlock);
-        header+= newHeader;
-        arcFile.seekp(newPosition);
-        arcFile.write(header.c_str(), header.size());
-
-        std::string newPointerLength = std::to_string(header.size());
-        std::string comp(pointerSize-newPointerLength.size(), '0');
-        newPointerLength = comp + newPointerLength;
-
-        arcFile.seekp(std::ios::beg);
-        arcFile.write(newPointerLength.c_str(), pointerSize);
-        arcFile.close();
-
-
-    }
-    else
-    {
-        // use the current first
-        //std::cout << "Fill the first";
-    }
-
-}
-
-
-
-
-
-
-
-

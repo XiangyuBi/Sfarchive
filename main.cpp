@@ -12,10 +12,9 @@ int main(int argc, const char* argv[])
     first_arge = argv[1];
     all_args.assign(argv + 1, argv + argc);
   }
+  std::vector<std::string> opts{"-v", "-h", "-d", "display", "add", "del", };
 
-  std::vector<std::string> opts{"-v", "-h", "-d", "display", "add", "delete", };
-
-  std::vector<bool> exts{false, false, false, false, true, true};
+  std::vector<bool> exts{false, false, true, true, true, true};
 
   std::vector<std::string> decs{"Show current version of project",
                                 "Get help for options", 
@@ -25,7 +24,6 @@ int main(int argc, const char* argv[])
                                 "Delete a file from archive"};
 
   Options Option(std::string(argv[0]), opts, decs, exts);
-
   Parse parser(Option);
   parser.parse(all_args, argc);
 

@@ -54,8 +54,8 @@ std::string Options::str(size_t indent) const
 
   Parse& Parse::parse(std::vector<std::string> inArgv, int inArgc)  
   {
-    size_t i;
-    for(i = 0; i < size_t(inArgc)-1; i++)
+      size_t i;
+      for(i = 0; i < size_t(inArgc)-1; i++)
     {
 
       if (std::find(opts.options.begin(), opts.options.end(), inArgv[i]) != opts.options.end())
@@ -66,41 +66,50 @@ std::string Options::str(size_t indent) const
 
         else if (inArgv[i] == "add")
         {
-            if(inArgv.size() == i + 1)
+            if(inArgv.size() == i + 2)
             {
-                std::cerr << "[Error]    Wrong delete input" << std::endl;
+                std::cerr << "[Error]    Wrong add input" << std::endl;
                 break;
             }
             //  ADD CLASS HERE
             std::vector<std::string> files(inArgv.begin() + i + 1, inArgv.end());
-            for(auto & x : files) std::cout << x <<std::endl;
+          //  for(auto & x : files) std::cout << x <<std::endl;
             AddFile Add(files);
             Add.addFiles();
             break;
 
         }
 
-        else if (inArgv[i] == "delete")
+        else if (inArgv[i] == "del")
         {
-            if(inArgv.size() == i + 1)
+            std::cout <<inArgv.size() << " " << i << std::endl;
+            if(inArgv.size() == i + 2)
             {
                 std::cerr << "[Error]    Wrong delete input"<< std::endl;
                 break;
             }
             //  DELETE CLASS HERE
             std::vector<std::string> files(inArgv.begin() + i + 1, inArgv.end());
-            //for(auto & x : files) std::cout << x <<std::endl;
+          //  for(auto & x : files) std::cout << x <<std::endl;
+
+            DelFile Del(files);
+            Del.delFiles();
             break;
         }
 
-        else if (inArgv[i] == "display" || "-d")
+        else if (inArgv[i] == "display" || inArgv[i] == "-d")
+
         {
-            if(inArgv.size() == i + 1)
+
+            if(inArgv.size() != i + 2)
             {
                 std::cerr << "[Error]    Specify the archive name: [-d <archive name>]"<< std::endl;
                 break;
             }
-            std::cout << "display class here" << std::endl;
+
+            std::string arch = inArgv[1];
+            FileOperations fileop(arch);
+            fileop.showAllFiles();
             break;
         }
 

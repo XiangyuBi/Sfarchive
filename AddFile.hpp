@@ -39,14 +39,16 @@ public:
 
     long pointerSize = 10;
 
-    static std::vector<int> getBlockForFile(std::string &filename, std::string& header);
-
-    static std::vector<int> getAvailableBlock(std::string& header);
-
-    static std::string getInformationForFile(std::string &filename, std::string& header);
-
-
-
+    inline static bool exists_test (const std::string& name) {
+        struct stat buffer;
+        return (stat (name.c_str(), &buffer) == 0);
+    }
+/*
+    static inline std::string tail(std::string const& source, size_t const length) {
+        if (length >= source.size()) { return source; }
+        return source.substr(source.size() - length);
+    } // tail
+*/
 
 protected:
     std::string archive;
@@ -55,10 +57,7 @@ protected:
     //std::string root = "./";
 
 
-    inline bool exists_test (const std::string& name) {
-        struct stat buffer;
-        return (stat (name.c_str(), &buffer) == 0);
-    }
+
 
 
     std::string generateLog(const std::string &filename, long &size, const std::string& block);
@@ -72,6 +71,34 @@ protected:
 
 
 };
+
+
+
+
+class Header
+{
+public:
+    explicit Header(std::string& header);
+
+    std::vector<int> getBlockForFile(std::string &filename);
+
+    std::vector<int> getAvailableBlock();
+
+    std::string getInformationForFile(std::string& filename);
+
+    Header& parseAll();
+
+    std::vector<std::string> filenames;
+
+    std::string header;
+
+
+
+
+
+
+};
+
 
 
 
