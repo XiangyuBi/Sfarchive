@@ -26,6 +26,7 @@ public:
 protected:
     std::string archive;
     std::vector<std::string> files;
+    void resize(std::string& header);
 
 };
 

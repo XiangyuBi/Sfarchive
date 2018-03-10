@@ -82,7 +82,6 @@ std::string Options::str(size_t indent) const
 
         else if (inArgv[i] == "del")
         {
-            std::cout <<inArgv.size() << " " << i << std::endl;
             if(inArgv.size() == i + 2)
             {
                 std::cerr << "[Error]    Wrong delete input"<< std::endl;
@@ -90,26 +89,74 @@ std::string Options::str(size_t indent) const
             }
             //  DELETE CLASS HERE
             std::vector<std::string> files(inArgv.begin() + i + 1, inArgv.end());
-          //  for(auto & x : files) std::cout << x <<std::endl;
+            //for(auto & x : files) std::cout << x <<std::endl;
 
             DelFile Del(files);
             Del.delFiles();
             break;
         }
 
-        else if (inArgv[i] == "display" || inArgv[i] == "-d")
-
+            else if (inArgv[i] == "-e")
         {
-
-            if(inArgv.size() != i + 2)
+            if(inArgv.size() == i + 2 || inArgv.size() >= i + 4)
             {
-                std::cerr << "[Error]    Specify the archive name: [-d <archive name>]"<< std::endl;
+                std::cerr << "[Error]    Wrong extract input, only one file accepted one time"<< std::endl;
                 break;
             }
 
-            std::string arch = inArgv[1];
+            std::string arch = inArgv[i+1];
+            std::string file = inArgv[i+2];
+
+            ExtractFile ex(arch, file);
+            ex.extract();
+            break;
+        }
+
+        else if (inArgv[i] == "-l")
+
+        {
+
+            if(inArgv.size() == i + 1)
+            {
+                std::cerr << "[Error]    Specify the archive name: [-l <archive name> (\"string\")]"<< std::endl;
+                break;
+            }
+
+            else if(inArgv.size() == i + 2)
+            {
+                std::string arch = inArgv[1];
+                FileOperations fileop(arch);
+                fileop.showAllFiles();
+                break;
+
+            }
+            else if( inArgv.size() > i + 2)
+            {
+                std::string arch = inArgv[1];
+                std::vector<std::string> strings(inArgv.begin() + i + 2, inArgv.end());
+                std::cout << arch << std::endl;
+                FileOperations fileop(arch);
+                fileop.find(strings);
+
+                // for(auto& x : strings) std::cout << x << std::endl;
+                break;
+
+            }
+        }
+
+        else if (inArgv[i] == "find")
+        {
+            if(inArgv.size() == i + 2 || inArgv.size() >= i + 4)
+            {
+                std::cerr << "[Error]    Wrong extract input, only one file accepted one time"<< std::endl;
+                break;
+            }
+
+            std::string arch = inArgv[i+1];
+            std::string str = inArgv[i+2];
             FileOperations fileop(arch);
-            fileop.showAllFiles();
+            fileop.search(str);
+
             break;
         }
 

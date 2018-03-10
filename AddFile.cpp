@@ -35,12 +35,16 @@ void AddFile::add(std::string& filein) {
         return;
     }
 
+    auto end = std::chrono::system_clock::now();
+
+    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+    std::string time = std::ctime(&end_time);
 
     if (exists_test(filename))
-        addFileToArchive(filename, contents, length, filein);
+        addFileToArchive(filename, contents, length, filein, time);
 
     else
-        generateNewArchive(filename, contents, length, filein);
+        generateNewArchive(filename, contents, length, filein, time);
 
 
 }
@@ -59,14 +63,11 @@ std::string AddFile::generateHelper(const std::string &line) {
     return rline;
 }
 
-std::string AddFile::generateLog(const std::string &filename, long &size, const std::string& block) {
+std::string AddFile::generateLog(const std::string &filename, long &size, const std::string& block, std::string& time) {
 
-    auto end = std::chrono::system_clock::now();
 
-    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-    std::string time = std::ctime(&end_time);
     std::string log;
-    log += generateHelper(filename);
+    log += generateHelper("$FILENAME$"+filename);
     log += generateHelper(std::to_string(size) + " " + block);
     log += generateHelper(time);
     log += generateHelper("$Tag$:1");
@@ -75,7 +76,8 @@ std::string AddFile::generateLog(const std::string &filename, long &size, const 
 
 }
 
-void AddFile::generateNewArchive(std::string &filein, std::string& content,  long& length, std::string& filename) {
+void AddFile::generateNewArchive(std::string &filein, std::string& content,  long& length, std::string& filename,
+                                std::string& time) {
 
     std::cout << "    ...Creating new archive: [ " << archive << " ]" <<  std::endl;
 
@@ -97,7 +99,7 @@ void AddFile::generateNewArchive(std::string &filein, std::string& content,  lon
     }
 
     // generate initial header for the file
-    std::string header = generateLog(filename, length, blockHeader);
+    std::string header = generateLog(filename, length, blockHeader, time);
     header = "{-1}" + header + "{" + std::to_string(block) + "}";
     outfile.seekp(headerStart + pointerSize - 1);
 
@@ -120,10 +122,8 @@ void AddFile::generateNewArchive(std::string &filein, std::string& content,  lon
  * */
 
 
-
-
-
-void AddFile::addFileToArchive(std::string &filein, std::string &content, long &length, std::string &filename) {
+void AddFile::addFileToArchive(std::string &filein, std::string &content, long &length, std::string &filename,
+                                std::string& time) {
 
 
 
@@ -165,7 +165,7 @@ void AddFile::addFileToArchive(std::string &filein, std::string &content, long &
     auto f = header.rfind(filename);
 
 
-    if(f != std::string::npos && header[f-1] == '{' && header[f+filename.size()] == '}')
+    if(f != std::string::npos && header[f-1] == '$' && header[f+filename.size()] == '}')
     {
         if( header[header.find("$Tag$", f+1) + 6] != '0' ) {
             std::cerr << "Tag: " <<  header[header.find("$Tag$", f+1) + 6] << std::endl;
@@ -201,7 +201,7 @@ void AddFile::addFileToArchive(std::string &filein, std::string &content, long &
             newBlock += std::to_string(i);
             newBlock += " ";
         }
-        std::string newHeader = generateLog(filename, length, newBlock);
+        std::string newHeader = generateLog(filename, length, newBlock, time);
         header += newHeader;
         header += generateHelper(std::to_string(newBlockNum+currentBlockNum));
         arcFile.seekp(newPosition);
@@ -252,7 +252,7 @@ void AddFile::addFileToArchive(std::string &filein, std::string &content, long &
             arcFile.write(writeBuffer.c_str(), writeBuffer.size());
             //int currentBlockNum = (position - pointerSize) / blockSize;
             int newBlockNum = ceil(double(length) / blockSize);
-            //auto newPosition = (currentBlockNum + newBlockNum) * blockSize + pointerSize;
+            auto newPosition = (currentBlockNum + newBlockNum) * blockSize + pointerSize;
 
             std::string newBlock= header.substr(1, emptyBlockEnd - 1);
 
@@ -265,10 +265,11 @@ void AddFile::addFileToArchive(std::string &filein, std::string &content, long &
             }
 
             header = "{-1" + header;
-            std::string newHeader = generateLog(filename, length, newBlock);
+            std::string newHeader = generateLog(filename, length, newBlock, time);
             header+= newHeader;
             header += generateHelper(std::to_string(newBlockNum+currentBlockNum));
-            arcFile.seekp(0,std::ios::end);
+            //arcFile.seekp(0,std::ios::end);
+            arcFile.seekp(newPosition);
             arcFile.write(header.c_str(), header.size());
 
             std::string newPointerLength = std::to_string(header.size());
@@ -310,10 +311,12 @@ void AddFile::addFileToArchive(std::string &filein, std::string &content, long &
 
 
             header = "{" + emptyBlocks +  header;
-            std::string newHeader = generateLog(filename, length, usedBlocks);
+            std::string newHeader = generateLog(filename, length, usedBlocks, time);
             header+= newHeader;
             header += generateHelper(std::to_string(currentBlockNum));
-            arcFile.seekp(0,std::ios::end);
+           // arcFile.seekp(0,std::ios::end);
+            arcFile.seekp(position);
+
             arcFile.write(header.c_str(), header.size());
             arcFile.seekp(std::ios::beg);
             std::string newPointer = std::to_string(header.size());
@@ -328,6 +331,11 @@ void AddFile::addFileToArchive(std::string &filein, std::string &content, long &
 
     }
 
+}
+
+AddFile::AddFile(std::string &arch)
+    : archive(arch)
+{
 }
 
 

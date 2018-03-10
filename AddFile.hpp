@@ -15,6 +15,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <cstdio>
 
 #include <cerrno>
 #include <sys/stat.h>
@@ -31,6 +32,8 @@ class AddFile
 public:
     explicit AddFile(std::vector<std::string> suffixes);
 
+    explicit AddFile(std::string &arch);
+
     void add(std::string& filein);
 
     AddFile& addFiles();
@@ -43,7 +46,20 @@ public:
         struct stat buffer;
         return (stat (name.c_str(), &buffer) == 0);
     }
+
+    void generateNewArchive(std::string& filein, std::string& content,  long& length, std::string& filename,
+                            std::string& time);
+
+    void addFileToArchive(std::string& filein, std::string& content, long& length, std::string& filename,
+                          std::string& time);
+
 /*
+ *  void generateNewArchive(std::string& filein, std::string& content,  long& length, std::string& filename,
+                            std::string& time);
+
+    void addFileToArchive(std::string& filein, std::string& content, long& length, std::string& filename,
+                            std::string& time);
+
     static inline std::string tail(std::string const& source, size_t const length) {
         if (length >= source.size()) { return source; }
         return source.substr(source.size() - length);
@@ -60,13 +76,10 @@ protected:
 
 
 
-    std::string generateLog(const std::string &filename, long &size, const std::string& block);
+    std::string generateLog(const std::string &filename, long &size, const std::string& block, std::string& time);
 
     inline std::string generateHelper(const std::string& line);
 
-    void generateNewArchive(std::string& filein, std::string& content,  long& length, std::string& filename);
-
-    void addFileToArchive(std::string& filein, std::string& content, long& length, std::string& filename);
 
 
 

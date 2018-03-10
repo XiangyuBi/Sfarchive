@@ -14,8 +14,9 @@
 #include <queue>
 
 //#include "Command.cpp"
-#include "DelFile.cpp"
+//#include "DelFile.cpp"
 #include "FileOperations.cpp"
+#include "ExtractFile.cpp"
 
 class Options
 {

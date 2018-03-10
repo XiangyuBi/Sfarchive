@@ -12,16 +12,18 @@ int main(int argc, const char* argv[])
     first_arge = argv[1];
     all_args.assign(argv + 1, argv + argc);
   }
-  std::vector<std::string> opts{"-v", "-h", "-d", "display", "add", "del", };
+  std::vector<std::string> opts{"-v", "-h", "-l", "add", "del", "-e", "find" };
 
   std::vector<bool> exts{false, false, true, true, true, true};
 
   std::vector<std::string> decs{"Show current version of project",
                                 "Get help for options", 
                                 "Show current files in the archive",
-                                "(Same as -d)",
                                 "Add a file into archive",
-                                "Delete a file from archive"};
+                                "Delete a file from archive",
+                                "Extract file",
+                                "Find files in archive containing a string"
+                                };
 
   Options Option(std::string(argv[0]), opts, decs, exts);
   Parse parser(Option);
